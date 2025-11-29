@@ -68,10 +68,3 @@ Maintenant crée le fichier phase2.md
 
 Même procédure :
 Add file → Create new file → docs/phase2.md
-
-Colle :
-
-Phase 2 — SOC & Automatisation
-🎯 Objectif
-
-Mettre en place la chaîne complète de détection et r
