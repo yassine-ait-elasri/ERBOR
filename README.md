@@ -20,7 +20,7 @@ Simulation de grade production d'une infrastructure réseau d'agence nationale, 
 
 * VirtualBox organisation
 
-Phase 2 : SOC + Automatisation
+#### Phase 2 : SOC + Automatisation
 
 * Installation Security Onion
 
@@ -32,7 +32,7 @@ Phase 2 : SOC + Automatisation
 
 * Blocage/déblocage automatique
 
-Phase 3 : Advanced Networking (à venir)
+#### Phase 3 : Advanced Networking (à venir)
 
 * OSPF, BGP
 
