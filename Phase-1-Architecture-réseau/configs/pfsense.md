@@ -45,29 +45,38 @@ Cette page décrit le déploiement de pfSense en tant que pare-feu périmétriqu
 ## 3) Configuration initiale via GUI
 
 1. Ouvrir la GUI depuis une machine du réseau `Management` :  
-   `https://10.0.254.2/`  
+   `https://10.0.254.2/`  ( ou `http://10.0.254.2/` )
    - Login : admin (ou compte créé à l’installation) — **changer le mot de passe immédiatement**.
 
-2. **System → General Setup**  
+     <img width="1912" height="702" alt="image" src="https://github.com/user-attachments/assets/51dee329-ceba-4c22-a5ce-b44a38208c64" />
+
+
+1. **System → General Setup**  
    - Hostname, Domain, DNS (si nécessaire), Timezone.
+<img width="1235" height="818" alt="image" src="https://github.com/user-attachments/assets/73425364-a80e-4dc6-b5ec-48feb66066a3" />
 
-3. **System → Advanced**  
-   - Activer HTTPS, vérifier mode webConfigurator (TLS).
-   - Activer *anti-lockout* si tu veux garder le port 443 accessible management.
+2. **System → Advanced**  
+   - choisit  HTTP/HTTPS.
+   - Activer *anti-lockout* si tu veux garder pfsense accessible pour management.
+<img width="1907" height="632" alt="image" src="https://github.com/user-attachments/assets/37ec77ee-005f-4d95-880a-3f361eef60de" />
 
-4. **Interfaces → Assign**  
+3. **Interfaces → Assign**  
    - Vérifier que `em0/em1/em2/em3` sont bien mappés et ont les bonnes IPs.  
    - Si besoin : *Interfaces → [emX] → Static IPv4* pour définir l’IP.
+<img width="1918" height="452" alt="image" src="https://github.com/user-attachments/assets/512b06b5-5dc9-435d-908c-c1fa9a4cbe2d" />
+<br/> interfaces : IPs
+<p></p>
+<img width="1918" height="452" alt="image" src="https://github.com/user-attachments/assets/7dc2551c-8087-4d50-91f4-0bc6775917f8" />
 
-5. **System → Routing → Gateways**  
+4. **System → Routing → Gateways**  
    - Ajouter une gateway vers `10.0.1.1` (VyOS) si pfSense doit joindre les sous-réseaux internes via VyOS.
 
-6. **System → Routing → Static Routes**  
+5. **System → Routing → Static Routes**  
    - Ajouter :
      - Destination : `10.0.2.0/24` → Gateway : `10.0.1.1`
      - Destination : `10.0.3.0/24` → Gateway : `10.0.1.1`
 
-7. **Firewall → Rules** (règles minimales recommandées)
+6. **Firewall → Rules** (règles minimales recommandées)
    - **Management (em3)** :
      - Allow : `ManagementNet` → `This firewall (self)` ports `443,22` (administration)
    - **DMZ (em2)** :
@@ -76,10 +85,10 @@ Cette page décrit le déploiement de pfSense en tant que pare-feu périmétriqu
    - **WAN** :
      - Minimal NAT/Port-Forward si tu publies un service DMZ
 
-8. **Firewall → NAT → Outbound**  
+7. **Firewall → NAT → Outbound**  
    - Mode automatique suffit pour un lab. Si tu utilises NAT manuel, créer mapping source `10.0.2.0/24` -> WAN.
 
-9. **Diagnostics → Backup & Restore**  
+8. **Diagnostics → Backup & Restore**  
    - Télécharger le `config.xml` localement pour archivage **avant** toute modification critique.
 
 ---
