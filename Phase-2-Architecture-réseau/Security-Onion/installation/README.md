@@ -272,7 +272,7 @@ Cela permet de gérer :
 * les rotations fréquentes de Security Onion,
 * les changements brutaux de taille,
 * les suppressions/recréations.
-
+( -1 = skip )
 <img width="467" height="760" alt="image" src="https://github.com/user-attachments/assets/64f14097-0c3e-479e-a865-8a39ffbf4fa2" />
 
 ### ✔ Lecture incrémentale réelle
