@@ -35,6 +35,8 @@ Cette page décrit le déploiement de pfSense en tant que pare-feu périmétriqu
 | `em1`   | Core       | 10.0.1.2/30         |
 | `em2`   | DMZ        | 10.0.4.1/24         |
 | `em3`   | Management | 10.0.254.2/24       |
+<br/>
+<p align="center"><img  width="718" height="406" alt="image" src="https://github.com/user-attachments/assets/c0e2a3c1-f7a8-46f6-8a97-379dd93192c7" /></p>
 
 > **Important** : activer l’option *anti-lockout* ou créer une règle Management explicite pour éviter de se verrouiller hors de l’UI pendant les tests.
 
