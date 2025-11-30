@@ -69,27 +69,33 @@ Cette page décrit le déploiement de pfSense en tant que pare-feu périmétriqu
 <img width="1918" height="452" alt="image" src="https://github.com/user-attachments/assets/7dc2551c-8087-4d50-91f4-0bc6775917f8" />
 
 4. **System → Routing → Gateways**  
-   - Ajouter une gateway vers `10.0.1.1` (VyOS) si pfSense doit joindre les sous-réseaux internes via VyOS.
+   - Ajouter une gateway vers l'internet :
+<img width="1642" height="216" alt="image" src="https://github.com/user-attachments/assets/f523659d-3e28-4cea-a732-973b726d57a6" />
 
-5. **System → Routing → Static Routes**  
-   - Ajouter :
-     - Destination : `10.0.2.0/24` → Gateway : `10.0.1.1`
-     - Destination : `10.0.3.0/24` → Gateway : `10.0.1.1`
 
-6. **Firewall → Rules** (règles minimales recommandées)
+5. **Firewall → Rules** (règles minimales recommandées)
    - **Management (em3)** :
      - Allow : `ManagementNet` → `This firewall (self)` ports `443,22` (administration)
+<img width="1907" height="632" alt="image" src="https://github.com/user-attachments/assets/37ec77ee-005f-4d95-880a-3f361eef60de" />
+
    - **DMZ (em2)** :
-     - Allow : DMZ → WAN ports `80,443` (si tu publies des services)
+     - Allow : DMZ → WIFI INTERFACE `WIFI INTERFACE` ( pour un accès externe ou dmz'
+     - Allow : DMZ → DMZ_INTERFACE `WIFI INTERFACE` ( pour les mis à jours '
      - Deny : DMZ → Management (par défaut : refuser)
+     - Deny : DMZ → LAN (par défaut : refuser)
+<img width="1365" height="576" alt="image" src="https://github.com/user-attachments/assets/3947affb-b1a2-4be5-aa78-7043ab63fffb" />
+
    - **WAN** :
      - Minimal NAT/Port-Forward si tu publies un service DMZ
+<img width="1318" height="447" alt="image" src="https://github.com/user-attachments/assets/19cb5959-2154-4f42-8df8-586281180ea6" />
 
-7. **Firewall → NAT → Outbound**  
+6. **Firewall → NAT → Outbound**  
    - Mode automatique suffit pour un lab. Si tu utilises NAT manuel, créer mapping source `10.0.2.0/24` -> WAN.
+<img width="1242" height="842" alt="image" src="https://github.com/user-attachments/assets/34ec25d8-63c9-4e24-8f9e-2ba7020399a3" />
 
-8. **Diagnostics → Backup & Restore**  
+7. **Diagnostics → Backup & Restore**  
    - Télécharger le `config.xml` localement pour archivage **avant** toute modification critique.
+<img width="1915" height="631" alt="image" src="https://github.com/user-attachments/assets/10c0419e-15fe-4027-ba1d-c044be015da3" />
 
 ---
 
