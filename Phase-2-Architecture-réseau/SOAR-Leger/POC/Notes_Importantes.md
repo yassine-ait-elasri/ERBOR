@@ -56,18 +56,15 @@ L’infrastructure de la vidéo est donc volontairement compacte.
 
 Tous les scripts suivants fonctionnent en mode **verbeux** pour les besoins de la vidéo :
 
-* `parse_events_to_redis.py`
-* `worker_pop_and_post.py`
-* les scripts shell de collecte
-* les workflows n8n
+* `script.sh`
+* `worker.py`
+
 
 Chaque étape est affichée :
 
 * alertes poussées dans Redis
 * valeurs de timestamp
-* pop / push / retry
 * logs HTTP envoyés vers n8n
-* statut des règles sur PfSense
 
 ➡️ En production, ces logs seraient évidemment beaucoup plus silencieux.
 
