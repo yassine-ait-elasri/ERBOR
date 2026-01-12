@@ -1,0 +1,67 @@
+frr defaults traditional
+frr version 8.5.2
+hostname core-router
+log syslog informational
+!
+interface lo
+ ip address 10.0.255.1/32
+!
+interface eth0
+ ip address 10.0.1.9/30
+ ip ospf area 0
+ ip ospf network point-to-point
+ ip ospf authentication message-digest
+ ip ospf message-digest-key 1 md5 SuperSecret123
+ ip ospf bfd
+!
+interface eth1
+ ip address 10.0.1.13/30
+ ip ospf area 0
+ ip ospf network point-to-point
+ ip ospf authentication message-digest
+ ip ospf message-digest-key 1 md5 SuperSecret123
+ ip ospf bfd
+!
+interface eth2
+ ip address 10.0.1.17/30
+ ip ospf area 0
+ ip ospf network point-to-point
+ ip ospf authentication message-digest
+ ip ospf message-digest-key 1 md5 SuperSecret123
+ ip ospf bfd
+!
+interface eth3
+ ip address 10.0.1.21/30
+ ip ospf area 0
+ ip ospf network point-to-point
+ ip ospf authentication message-digest
+ ip ospf message-digest-key 1 md5 SuperSecret123
+ ip ospf bfd
+!
+interface eth4
+ ip address 10.0.1.5/30
+ ip ospf area 0
+ ip ospf network point-to-point
+ ip ospf authentication message-digest
+ ip ospf message-digest-key 1 md5 SuperSecret123
+ ip ospf bfd
+!
+router ospf
+ ospf router-id 10.0.255.1
+ network 10.0.1.8/30 area 0
+ network 10.0.1.12/30 area 0
+ network 10.0.1.16/30 area 0
+ network 10.0.1.20/30 area 0
+ network 10.0.1.4/30 area 0
+ redistribute connected
+!
+bfd
+ peer 10.0.1.10 interface eth0
+ peer 10.0.1.14 interface eth1
+ peer 10.0.1.18 interface eth2
+ peer 10.0.1.22 interface eth3
+ peer 10.0.1.6 interface eth4
+!
+line vty
+!
+

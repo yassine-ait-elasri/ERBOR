@@ -1,0 +1,8 @@
+all:
+  hosts:
+    nexsus_host:
+      ansible_host: 10.0.1.5      # IP of your ContainerLab VM
+      ansible_user: nexsus        # user to SSH into VM
+      ansible_ssh_pass: nexsus    # password for the user
+      ansible_become: yes         # to allow sudo
+      ansible_become_pass: nexsus # sudo password if needed

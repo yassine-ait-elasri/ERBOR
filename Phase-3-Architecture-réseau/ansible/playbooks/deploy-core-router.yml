@@ -1,0 +1,51 @@
+- name: Deploy FRR config to core-router container
+  hosts: nexsus_host
+  gather_facts: no
+  vars:
+    container_name: clab-nexsus-lab-core-router
+    frr_conf_path: /etc/frr/frr.conf
+
+  tasks:
+
+    - name: Ensure backup directory exists on host
+      file:
+        path: /tmp/frr_backup
+        state: directory
+
+    - name: Backup existing FRR config (if present)
+      shell: >
+        docker exec {{ container_name }} sh -c
+        'test -f {{ frr_conf_path }} && cp {{ frr_conf_path }} /tmp/frr_backup/frr.conf.bak || true'
+
+    - name: Render new FRR config
+      template:
+        src: ../templates/core-router.conf.j2
+        dest: /tmp/core-router.conf
+
+    - name: Copy FRR config into container
+      shell: >
+        docker cp /tmp/core-router.conf
+        {{ container_name }}:{{ frr_conf_path }}
+
+    - name: Ensure integrated vtysh is enabled
+      shell: >
+        docker exec {{ container_name }}
+        sh -c 'test -f /etc/frr/vtysh.conf || echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf'
+
+    - name: Enable required FRR daemons
+      shell: >
+        docker exec {{ container_name }} sh -c '
+          sed -i "s/^zebra=.*/zebra=yes/" /etc/frr/daemons || echo "zebra=yes" >> /etc/frr/daemons
+          sed -i "s/^bgpd=.*/bgpd=no/" /etc/frr/daemons || echo "bgpd=no" >> /etc/frr/daemons
+          sed -i "s/^ospfd=.*/ospfd=yes/" /etc/frr/daemons || echo "ospfd=yes" >> /etc/frr/daemons
+          sed -i "s/^bfdd=.*/bfdd=yes/" /etc/frr/daemons || echo "bfdd=yes" >> /etc/frr/daemons
+        '
+
+    - name: Restart FRR daemons properly
+      shell: >
+        docker exec {{ container_name }} /etc/init.d/frr restart
+      register: restart_result
+      failed_when: restart_result.rc not in [0, 137]
+    - name: Wait for FRR daemons to start
+      shell: >
+        docker exec {{ container_name }} sh -c "while ! pidof zebra ospfd bfdd > /dev/null 2>&1; do sleep 1; done"
