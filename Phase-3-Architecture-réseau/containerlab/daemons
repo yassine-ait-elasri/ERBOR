@@ -1,0 +1,37 @@
+# Core routing processes
+zebra=yes
+staticd=yes
+
+# OSPF (multi-area supported by default)
+ospfd=yes
+ospf6d=no
+
+# BGP
+bgpd=yes
+
+# BFD (used by OSPF, BGP, etc.)
+bfdd=yes
+
+# VRRP
+vrrpd=yes
+
+# Other routing protocols (disabled for now)
+ripd=no
+ripngd=no
+isisd=no
+pimd=no
+ldpd=no
+nhrpd=no
+eigrpd=no
+babeld=no
+sharpd=no
+pbrd=no
+fabricd=no
+
+# SNMP / telemetry (optional)
+snmpd=no
+
+# Management
+watchfrr=yes
+
+vtysh_enable=yes
