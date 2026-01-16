@@ -1,0 +1,36 @@
+frr defaults traditional
+frr version 8.5.2
+hostname {{ hostname }}
+log syslog informational
+service integrated-vtysh-config
+!
+interface lo
+ ip address {{ loopback }}/32
+!
+{% for iface in interfaces %}
+interface {{ iface.name }}
+ ip address {{ iface.ip }}
+{% if iface.area is defined %}
+ ip ospf area {{ iface.area }}
+ ip ospf network {{ iface.ospf_type }}
+ ip ospf authentication message-digest
+ ip ospf message-digest-key 1 md5 {{ iface.key }}
+ ip ospf bfd
+{% endif %}
+!
+{% endfor %}
+
+router ospf
+ ospf router-id {{ loopback }}
+ redistribute connected
+!
+
+bfd
+{% for iface in interfaces %}
+{% if iface.peer_ip is defined %}
+ peer {{ iface.peer_ip }} interface {{ iface.name }}
+{% endif %}
+{% endfor %}
+!
+line vty
+!

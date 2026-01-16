@@ -1,0 +1,60 @@
+- name: Deploy FRR config to core-router container
+  hosts: nexsus_host
+  gather_facts: no
+  vars:
+    container_name: clab-nexsus-lab-core-router
+    frr_conf_path: /etc/frr/frr.conf
+
+  tasks:
+
+    - name: Ensure backup directory exists on host
+      file:
+        path: /tmp/frr_backup
+        state: directory
+
+    - name: Backup existing FRR config (if present)
+      shell: >
+        docker exec {{ container_name }} sh -c
+        'test -f {{ frr_conf_path }} && cp {{ frr_conf_path }} /tmp/frr_backup/frr.conf.bak || true'
+
+    - name: Render new FRR config
+      template:
+        src: ../templates/core-router.conf.j2
+        dest: /tmp/core-router.conf
+
+    - name: Copy FRR config into container
+      shell: >
+        docker cp /tmp/core-router.conf
+        {{ container_name }}:{{ frr_conf_path }}
+
+    - name: Ensure integrated vtysh is enabled
+      shell: >
+        docker exec {{ container_name }} sh -c
+        'test -f /etc/frr/vtysh.conf || echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf'
+
+    - name: Enable required FRR daemons
+      shell: >
+        docker exec {{ container_name }} sh -c '
+          sed -i "s/^zebra=.*/zebra=yes/" /etc/frr/daemons
+          && sed -i "s/^bgpd=.*/bgpd=no/" /etc/frr/daemons
+          && sed -i "s/^ospfd=.*/ospfd=yes/" /etc/frr/daemons
+          && sed -i "s/^ospf6d=.*/ospf6d=no/" /etc/frr/daemons
+          && sed -i "s/^ripd=.*/ripd=no/" /etc/frr/daemons
+          && sed -i "s/^ripngd=.*/ripngd=no/" /etc/frr/daemons
+          && sed -i "s/^isisd=.*/isisd=no/" /etc/frr/daemons
+          && sed -i "s/^pimd=.*/pimd=no/" /etc/frr/daemons
+          && sed -i "s/^ldpd=.*/ldpd=no/" /etc/frr/daemons
+          && sed -i "s/^nhrpd=.*/nhrpd=no/" /etc/frr/daemons
+          && sed -i "s/^eigrpd=.*/eigrpd=no/" /etc/frr/daemons
+          && sed -i "s/^babeld=.*/babeld=no/" /etc/frr/daemons
+          && sed -i "s/^sharpd=.*/sharpd=no/" /etc/frr/daemons
+          && sed -i "s/^staticd=.*/staticd=no/" /etc/frr/daemons
+          && sed -i "s/^pbrd=.*/pbrd=no/" /etc/frr/daemons
+          && sed -i "s/^bfdd=.*/bfdd=yes/" /etc/frr/daemons
+        '
+
+    - name: Reload FRR daemons safely (SIGHUP)
+      shell: >
+        docker exec {{ container_name }} sh -c
+        'kill -HUP $(pidof zebra ospfd bfdd 2>/dev/null) || true'
+      ignore_errors: yes

@@ -1,0 +1,19 @@
+# ansible/host_vars/access09.yml
+hostname: access09
+loopback: 10.0.255.109
+
+interfaces:
+  # Uplink to dist03 (P2P /31, Area 1)
+  - name: eth5
+    ip: 10.0.2.29/31
+    peer_ip: 10.0.2.28
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point
+
+  # LAN for clients behind access09
+  - name: eth6
+    ip: 10.0.11.1/24
+
+bfd_peers:
+  - { ip: 10.0.2.28, iface: eth5 }

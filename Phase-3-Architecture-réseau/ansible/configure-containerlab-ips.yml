@@ -1,0 +1,53 @@
+---
+- name: Configure IPs inside ContainerLab routers
+  hosts: nexsus_host
+  gather_facts: false
+  vars:
+    # Full container names as seen in `docker ps`
+    routers:
+      clab-nexsus-lab-core-router:
+        eth0: 10.0.1.1/24
+        eth1: 10.0.2.1/24
+      clab-nexsus-lab-dist01:
+        eth0: 10.0.1.2/24
+        eth1: 10.0.12.1/24
+      clab-nexsus-lab-dist02:
+        eth0: 10.0.1.3/24
+        eth1: 10.0.12.2/24
+      clab-nexsus-lab-access01:
+        eth0: 10.0.3.1/26
+      clab-nexsus-lab-client-a:
+        eth1: 10.0.3.10/26
+      # add all other containers here as needed
+
+  tasks:
+
+    - name: Create backup directory on nexsus
+      ansible.builtin.file:
+        path: /tmp/containerlab_backup
+        state: directory
+        mode: '0755'
+
+    - name: Backup current interface config (for rollback)
+      ansible.builtin.shell: |
+        docker exec {{ item.key }} ip addr show > /tmp/containerlab_backup/{{ item.key }}.txt
+      loop: "{{ routers | dict2items }}"
+      ignore_errors: yes
+
+    - name: Configure container interfaces
+      ansible.builtin.shell: |
+        {% for iface, ip in item.value.items() %}
+        docker exec {{ item.key }} ip addr add {{ ip }} dev {{ iface }} || echo "Skipping existing IP {{ ip }}"
+        docker exec {{ item.key }} ip link set {{ iface }} up
+        {% endfor %}
+      loop: "{{ routers | dict2items }}"
+
+    - name: Verify IPs
+      ansible.builtin.shell: |
+        docker exec {{ item.key }} ip addr show
+      loop: "{{ routers | dict2items }}"
+      register: ip_output
+
+    - name: Show configured IPs
+      ansible.builtin.debug:
+        var: ip_output.results

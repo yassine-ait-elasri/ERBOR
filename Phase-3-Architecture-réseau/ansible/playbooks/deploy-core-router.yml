@@ -1,51 +1,131 @@
-- name: Deploy FRR config to core-router container
+---
+- name: "Deploy FRR config to core-router container"
   hosts: nexsus_host
   gather_facts: no
+
   vars:
     container_name: clab-nexsus-lab-core-router
-    frr_conf_path: /etc/frr/frr.conf
+    configs_path: ../configs
+    default_gateway: 10.0.1.6
+
+    interfaces:
+      - { iface: lo,   ip: 10.0.255.1, mask: 32 }
+      - { iface: eth0, ip: 10.0.1.9,  mask: 30 }
+      - { iface: eth1, ip: 10.0.1.13, mask: 30 }
+      - { iface: eth2, ip: 10.0.1.17, mask: 30 }
+      - { iface: eth3, ip: 10.0.1.21, mask: 30 }
+      - { iface: eth4, ip: 10.0.1.5,  mask: 30 }
 
   tasks:
 
-    - name: Ensure backup directory exists on host
+    - name: "DEBUG: Show container and host info"
+      debug:
+        msg: |
+          Container name: {{ container_name }}
+          Configs path: {{ configs_path }}
+          Default gateway: {{ default_gateway }}
+          Interfaces: {{ interfaces }}
+
+    - name: "Ensure configs directory exists on host"
       file:
-        path: /tmp/frr_backup
+        path: "{{ configs_path }}"
         state: directory
+      register: configs_dir_result
 
-    - name: Backup existing FRR config (if present)
-      shell: >
-        docker exec {{ container_name }} sh -c
-        'test -f {{ frr_conf_path }} && cp {{ frr_conf_path }} /tmp/frr_backup/frr.conf.bak || true'
+    - name: "DEBUG: Show result of configs directory creation"
+      debug:
+        var: configs_dir_result
 
-    - name: Render new FRR config
+    - name: "Render core-router FRR config (host-side)"
       template:
         src: ../templates/core-router.conf.j2
-        dest: /tmp/core-router.conf
+        dest: "{{ configs_path }}/core-router.conf"
+      register: frr_config_result
 
-    - name: Copy FRR config into container
-      shell: >
-        docker cp /tmp/core-router.conf
-        {{ container_name }}:{{ frr_conf_path }}
+    - name: "DEBUG: Show result of FRR config rendering"
+      debug:
+        var: frr_config_result
 
-    - name: Ensure integrated vtysh is enabled
-      shell: >
-        docker exec {{ container_name }}
-        sh -c 'test -f /etc/frr/vtysh.conf || echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf'
+    - name: "Render daemons file (host-side, one-time)"
+      copy:
+        src: ../templates/daemons
+        dest: "{{ configs_path }}/daemons"
+        mode: '0644'
+      register: daemons_result
 
-    - name: Enable required FRR daemons
-      shell: >
-        docker exec {{ container_name }} sh -c '
-          sed -i "s/^zebra=.*/zebra=yes/" /etc/frr/daemons || echo "zebra=yes" >> /etc/frr/daemons
-          sed -i "s/^bgpd=.*/bgpd=no/" /etc/frr/daemons || echo "bgpd=no" >> /etc/frr/daemons
-          sed -i "s/^ospfd=.*/ospfd=yes/" /etc/frr/daemons || echo "ospfd=yes" >> /etc/frr/daemons
-          sed -i "s/^bfdd=.*/bfdd=yes/" /etc/frr/daemons || echo "bfdd=yes" >> /etc/frr/daemons
-        '
+    - name: "DEBUG: Show result of daemons file copy"
+      debug:
+        var: daemons_result
 
-    - name: Restart FRR daemons properly
-      shell: >
-        docker exec {{ container_name }} /etc/init.d/frr restart
+    - name: "Restart FRR to load new configuration"
+      shell: "docker exec {{ container_name }} /etc/init.d/frr restart"
       register: restart_result
       failed_when: restart_result.rc not in [0, 137]
-    - name: Wait for FRR daemons to start
+
+    - name: "DEBUG: Show result of FRR restart"
+      debug:
+        var: restart_result
+
+    - name: "Wait for FRR daemons to be ready"
       shell: >
-        docker exec {{ container_name }} sh -c "while ! pidof zebra ospfd bfdd > /dev/null 2>&1; do sleep 1; done"
+        docker exec {{ container_name }} sh -c
+        "while ! pidof zebra ospfd bgpd bfdd vrrpd > /dev/null 2>&1; do sleep 1; done"
+      register: wait_daemons_result
+
+    - name: "DEBUG: Show result of waiting for FRR daemons"
+      debug:
+        var: wait_daemons_result
+
+    - name: "Create dummy interfaces inside container (skip lo)"
+      shell: >
+        docker exec {{ container_name }} sh -c
+        "ip link add {{ item.iface }} type dummy 2>/dev/null || true"
+      loop: "{{ interfaces[1:] }}"   # skip lo
+      register: veth_create_result
+
+    - name: "DEBUG: Show result of dummy interface creation"
+      debug:
+        var: veth_create_result
+
+    - name: "Assign IP addresses and bring interfaces up"
+      shell: >
+        docker exec {{ container_name }} sh -c
+        "ip addr add {{ item.ip }}/{{ item.mask }} dev {{ item.iface }} 2>/dev/null || true &&
+         ip link set {{ item.iface }} up"
+      loop: "{{ interfaces }}"
+      register: ip_assign_result
+
+    - name: "DEBUG: Show result of IP assignment"
+      debug:
+        var: ip_assign_result
+
+    - name: "Enable IP forwarding"
+      shell: >
+        docker exec {{ container_name }} sh -c
+        "sysctl -w net.ipv4.ip_forward=1"
+      register: ip_forward_result
+
+    - name: "DEBUG: Show result of IP forwarding"
+      debug:
+        var: ip_forward_result
+
+    - name: "Configure default route via VyOS"
+      shell: >
+        docker exec {{ container_name }} sh -c
+        "ip route replace default via {{ default_gateway }}"
+      register: default_route_result
+
+    - name: "DEBUG: Show result of default route setup"
+      debug:
+        var: default_route_result
+
+    - name: "Ensure integrated vtysh is enabled"
+      shell: >
+        docker exec {{ container_name }} sh -c
+        'echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf'
+      register: vtysh_result
+
+    - name: "DEBUG: Show result of enabling vtysh"
+      debug:
+        var: vtysh_result
+

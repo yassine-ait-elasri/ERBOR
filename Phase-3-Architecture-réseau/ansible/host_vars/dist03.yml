@@ -1,0 +1,56 @@
+# ansible/host_vars/dist03.yml
+hostname: dist03
+loopback: 10.0.255.13
+
+interfaces:
+  # Uplink to Core (Area 0)
+  - name: eth5
+    ip: 10.0.1.13/31
+    peer_ip: 10.0.1.12
+    area: 0
+    key: SuperSecret123Area0
+    ospf_type: point-to-point
+
+  # Dist full-mesh (Area 1)
+  - name: eth1   # to dist01 eth2
+    ip: 10.0.2.3/31
+    peer_ip: 10.0.2.2
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point
+
+  - name: eth2   # to dist02 eth2
+    ip: 10.0.2.7/31
+    peer_ip: 10.0.2.6
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point
+
+  - name: eth3   # to dist04 eth3
+    ip: 10.0.2.10/31
+    peer_ip: 10.0.2.11
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point
+
+  # Downlinks to Access (Area 1)
+  - name: eth4   # to access07 eth5
+    ip: 10.0.2.24/31
+    peer_ip: 10.0.2.25
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point
+
+  - name: eth6   # to access08 eth5
+    ip: 10.0.2.26/31
+    peer_ip: 10.0.2.27
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point
+
+  - name: eth7   # to access09 eth5
+    ip: 10.0.2.28/31
+    peer_ip: 10.0.2.29
+    area: 1
+    key: SuperSecret123Area1
+    ospf_type: point-to-point

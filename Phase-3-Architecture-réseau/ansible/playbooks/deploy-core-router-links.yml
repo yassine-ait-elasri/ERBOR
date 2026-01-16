@@ -1,0 +1,84 @@
+- name: "CORE ROUTER – create REAL veth interfaces and IPs (NO dummy)"
+  hosts: nexsus_host
+  become: true
+  gather_facts: no
+
+  vars:
+    container_name: clab-nexsus-lab-core-router
+
+    interfaces:
+      - { name: eth0, ip: 10.0.1.9/30  }
+      - { name: eth1, ip: 10.0.1.13/30 }
+      - { name: eth2, ip: 10.0.1.17/30 }
+      - { name: eth3, ip: 10.0.1.21/30 }
+      - { name: eth4, ip: 10.0.1.5/30  }
+
+  tasks:
+
+    - name: "DEBUG – show target container"
+      debug:
+        msg: "Target container = {{ container_name }}"
+
+    - name: "Get container PID"
+      shell: >
+        docker inspect -f '{{ "{{.State.Pid}}" }}' {{ container_name }}
+      register: core_pid
+      changed_when: false
+
+    - name: "DEBUG – container PID"
+      debug:
+        msg: "Container PID = {{ core_pid.stdout }}"
+
+    - name: "ASSERT – container PID must exist"
+      assert:
+        that:
+          - core_pid.stdout | int > 0
+        fail_msg: "Container PID not found. Is the container running?"
+
+    - name: "Create veth pairs on host (one per interface)"
+      shell: |
+        ip link add veth-{{ item.name }} type veth peer name veth-peer-{{ item.name }} 2>/dev/null || true
+      loop: "{{ interfaces }}"
+
+    - name: "Move veth into container namespace"
+      shell: |
+        ip link set veth-{{ item.name }} netns {{ core_pid.stdout }} 2>/dev/null || true
+      loop: "{{ interfaces }}"
+
+    - name: "Rename veths inside container to ethX"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n ip link set veth-{{ item.name }} name {{ item.name }} 2>/dev/null || true
+      loop: "{{ interfaces }}"
+
+    - name: "Bring interfaces UP inside container"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n ip link set {{ item.name }} up
+      loop: "{{ interfaces }}"
+
+    - name: "Assign IP addresses inside container"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n ip addr add {{ item.ip }} dev {{ item.name }} 2>/dev/null || true
+      loop: "{{ interfaces }}"
+
+    - name: "Configure loopback IP"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n ip addr add 10.0.255.1/32 dev lo 2>/dev/null || true &&
+        nsenter -t {{ core_pid.stdout }} -n ip link set lo up
+
+    - name: "Enable IP forwarding"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n sysctl -w net.ipv4.ip_forward=1
+
+    - name: "Set default route via VyOS (10.0.1.6)"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n ip route replace default via 10.0.1.6
+
+    - name: "DEBUG – show interfaces inside container"
+      shell: |
+        nsenter -t {{ core_pid.stdout }} -n ip -br addr
+      register: ip_debug
+      changed_when: false
+
+    - name: "DEBUG – interface state"
+      debug:
+        var: ip_debug.stdout

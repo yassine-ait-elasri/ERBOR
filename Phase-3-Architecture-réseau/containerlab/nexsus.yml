@@ -1,0 +1,136 @@
+name: nexsus-lab
+
+topology:
+  nodes:
+    # Core bridge (towards VyOS/pfSense)
+    br-core:
+      kind: bridge
+
+    # Core router
+    core-router:
+      kind: linux
+      image: quay.io/frrouting/frr:8.5.2
+      binds:
+        - ./configs/core-router.conf:/etc/frr/frr.conf:rw
+        - ./configs/vtysh.conf:/etc/frr/vtysh.conf:rw
+        - ./configs/daemons:/etc/frr/daemons:rw
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+        - ip route replace default via 10.0.1.6 dev eth4
+
+    # Distribution routers
+    dist01:
+      kind: linux
+      image: quay.io/frrouting/frr:8.5.2
+      binds:
+        - ./configs/dist01.conf:/etc/frr/frr.conf:rw
+        - ./configs/vtysh.conf:/etc/frr/vtysh.conf:rw
+        - ./configs/daemons:/etc/frr/daemons:rw
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    dist02:
+      kind: linux
+      image: quay.io/frrouting/frr:8.5.2
+      binds:
+        - ./configs/dist02.conf:/etc/frr/frr.conf:rw
+        - ./configs/vtysh.conf:/etc/frr/vtysh.conf:rw
+        - ./configs/daemons:/etc/frr/daemons:rw
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    dist03:
+      kind: linux
+      image: quay.io/frrouting/frr:8.5.2
+      binds:
+        - ./configs/dist03.conf:/etc/frr/frr.conf:rw
+        - ./configs/daemons:/etc/frr/daemons:rw
+        - ./configs/vtysh.conf:/etc/frr/vtysh.conf:rw
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    dist04:
+      kind: linux
+      image: quay.io/frrouting/frr:8.5.2
+      binds:
+        - ./configs/dist04.conf:/etc/frr/frr.conf:rw
+        - ./configs/daemons:/etc/frr/daemons:rw
+        - ./configs/vtysh.conf:/etc/frr/vtysh.conf:rw
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    # Access routers
+    access01: &access
+      kind: linux
+      image: quay.io/frrouting/frr:8.5.2
+      binds:
+        - ./configs/access01.conf:/etc/frr/frr.conf:rw
+        - ./configs/daemons:/etc/frr/daemons:rw
+        - ./configs/vtysh.conf:/etc/frr/vtysh.conf:rw
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    access02: { <<: *access, binds: [ "./configs/access02.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access03: { <<: *access, binds: [ "./configs/access03.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access04: { <<: *access, binds: [ "./configs/access04.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access05: { <<: *access, binds: [ "./configs/access05.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access06: { <<: *access, binds: [ "./configs/access06.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access07: { <<: *access, binds: [ "./configs/access07.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access08: { <<: *access, binds: [ "./configs/access08.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access09: { <<: *access, binds: [ "./configs/access09.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access10: { <<: *access, binds: [ "./configs/access10.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access11: { <<: *access, binds: [ "./configs/access11.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+    access12: { <<: *access, binds: [ "./configs/access12.conf:/etc/frr/frr.conf:rw", "./configs/daemons:/etc/frr/daemons:rw", "./configs/vtysh.conf:/etc/frr/vtysh.conf:rw" ] }
+
+    # Clients (connected to access router LAN ports)
+    client-a:
+      kind: linux
+      image: alpine:latest
+
+    client-b:
+      kind: linux
+      image: alpine:latest
+
+  links:
+    # Core to distribution
+    # Core to distribution (MATCH IP PLAN)
+    - endpoints: ["core-router:eth1", "dist01:eth5"]  # 10.0.1.8/31  <-> 10.0.1.9/31
+    - endpoints: ["core-router:eth2", "dist02:eth5"]  # 10.0.1.10/31 <-> 10.0.1.11/31
+    - endpoints: ["core-router:eth3", "dist03:eth5"]  # 10.0.1.12/31 <-> 10.0.1.13/31
+    - endpoints: ["core-router:eth5", "dist04:eth5"]  # 10.0.1.14/31 <-> 10.0.1.15/31
+
+
+    # Distribution to distribution (full mesh)
+    - endpoints: ["dist01:eth1", "dist02:eth1"]
+    - endpoints: ["dist01:eth2", "dist03:eth1"]
+    - endpoints: ["dist01:eth3", "dist04:eth1"]
+    - endpoints: ["dist02:eth2", "dist03:eth2"]
+    - endpoints: ["dist02:eth3", "dist04:eth2"]
+    - endpoints: ["dist03:eth3", "dist04:eth3"]
+
+    # Dist01 -> Access01/02/03 (direct P2P links)
+    - endpoints: ["dist01:eth4", "access01:eth5"]
+    - endpoints: ["dist01:eth6", "access02:eth5"]
+    - endpoints: ["dist01:eth7", "access03:eth5"]
+
+    # Dist02 -> Access04/05/06 (direct P2P links)
+    - endpoints: ["dist02:eth4", "access04:eth5"]
+    - endpoints: ["dist02:eth6", "access05:eth5"]
+    - endpoints: ["dist02:eth7", "access06:eth5"]
+
+    # Dist03 -> Access07/08/09 (direct P2P links)
+    - endpoints: ["dist03:eth4", "access07:eth5"]
+    - endpoints: ["dist03:eth6", "access08:eth5"]
+    - endpoints: ["dist03:eth7", "access09:eth5"]
+
+    # Dist04 -> Access10/11/12 (direct P2P links)
+    - endpoints: ["dist04:eth4", "access10:eth5"]
+    - endpoints: ["dist04:eth6", "access11:eth5"]
+    - endpoints: ["dist04:eth7", "access12:eth5"]
+
+    # Clients to access router LAN ports
+    - endpoints: ["client-a:eth5", "access01:eth6"]
+    - endpoints: ["client-b:eth5", "access10:eth6"]
+
+    # Core to external bridge
+    - endpoints: ["core-router:eth4", "br-core:eth4"]

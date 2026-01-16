@@ -1,8 +1,30 @@
 all:
   hosts:
     nexsus_host:
-      ansible_host: 10.0.1.5      # IP of your ContainerLab VM
-      ansible_user: nexsus        # user to SSH into VM
-      ansible_ssh_pass: nexsus    # password for the user
-      ansible_become: yes         # to allow sudo
-      ansible_become_pass: nexsus # sudo password if needed
+      ansible_host: 10.0.1.5
+      ansible_user: nexsus
+      ansible_ssh_pass: nexsus
+      ansible_become: yes
+      ansible_become_pass: nexsus
+  children:
+    frr_routers:
+      vars:
+        ansible_delegate_to: nexsus_host
+      hosts:
+        core-router:
+        dist01:
+        dist02:
+        dist03:
+        dist04:
+        access01:
+        access02:
+        access03:
+        access04:
+        access05:
+        access06:
+        access07:
+        access08:
+        access09:
+        access10:
+        access11:
+        access12:

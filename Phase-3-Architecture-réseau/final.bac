@@ -1,0 +1,94 @@
+---
+- name: Deploy Full FRR Lab with Clients on nexsus
+  hosts: frr_routers
+  gather_facts: no
+  become: yes
+
+  vars:
+    nexsus_host: "nexsus_host"
+    base_dir: "/home/nexsus/nexsus_config"
+    config_dir: "{{ base_dir }}/configs"
+    containerlab_file: "{{ base_dir }}/nexsus.yml"
+
+    # FRR shared files
+    frr_shared_files:
+      - daemons
+      - vtysh.conf
+
+    # Clients configuration
+    clients:
+      - name: clab-nexsus-lab-client-a
+        iface: eth5
+        ip: 10.0.3.2/26
+        gw: 10.0.3.1
+      - name: clab-nexsus-lab-client-b
+        iface: eth5
+        ip: 10.0.3.194/26
+        gw: 10.0.3.193
+
+  tasks:
+
+    - name: Ensure base directory exists on nexsus
+      file:
+        path: "{{ base_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: "{{ nexsus_host }}"
+      run_once: true
+
+    - name: Ensure config directory exists on nexsus
+      file:
+        path: "{{ config_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: "{{ nexsus_host }}"
+      run_once: true
+
+    - name: Generate FRR configuration file for each router
+      template:
+        src: "../templates/frr.conf.j2"
+        dest: "{{ config_dir }}/{{ inventory_hostname }}.conf"
+      delegate_to: "{{ nexsus_host }}"
+      run_once: false
+      vars:
+        router_name: "{{ inventory_hostname }}"
+
+
+    - name: Copy shared FRR files to nexsus
+      copy:
+        src: "/home/kraken/network-lab/lab-infrastructure-reseau/Phase-3-Architecture-réseau/ansible/configs/{{ item }}"
+        dest: "{{ config_dir }}/{{ item }}"
+        mode: '0644'
+      loop: "{{ frr_shared_files }}"
+      delegate_to: "{{ nexsus_host }}"
+
+    - name: Copy containerlab YAML to nexsus
+      copy:
+        src: "/home/kraken/network-lab/lab-infrastructure-reseau/Phase-3-Architecture-réseau/containerlab/nexsus.yml"
+        dest: "{{ containerlab_file }}"
+        mode: '0644'
+      delegate_to: "{{ nexsus_host }}"
+
+    - name: Deploy containerlab lab on nexsus
+      command: "sudo containerlab deploy -t {{ containerlab_file }}"
+      delegate_to: "{{ nexsus_host }}"
+      become: yes
+      become_method: sudo
+      run_once: true
+
+    - name: Configure static IPs and gateways on clients
+      block:
+        - name: Set IP on client interface
+          command: "docker exec {{ item.name }} ip addr add {{ item.ip }} dev {{ item.iface }}"
+          delegate_to: "{{ nexsus_host }}"
+          loop: "{{ clients }}"
+
+        - name: Bring up client interface
+          command: "docker exec {{ item.name }} ip link set {{ item.iface }} up"
+          delegate_to: "{{ nexsus_host }}"
+          loop: "{{ clients }}"
+
+        - name: Set default route for client
+          command: "docker exec {{ item.name }} ip route add default via {{ item.gw }}"
+          delegate_to: "{{ nexsus_host }}"
+          loop: "{{ clients }}"

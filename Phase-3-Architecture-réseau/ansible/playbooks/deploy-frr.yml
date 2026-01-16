@@ -1,0 +1,185 @@
+---
+# Kraken runs Ansible, Nexsus runs containerlab + docker.
+# This playbook:
+#  1) Generates all FRR router configs (from host_vars + Jinja2) directly onto Nexsus
+#  2) Copies shared FRR files (daemons + vtysh.conf) onto Nexsus
+#  3) Copies containerlab topology file onto Nexsus
+#  4) Deploys the lab ONCE (no reload/incremental updates)
+#  5) Configures client-a and client-b IP + default gateway (so they can ping Internet)
+#
+# Assumptions:
+#  - inventory has host "nexsus_host" reachable by SSH
+#  - router host_vars exist under ansible/host_vars/<router>.yml
+#  - template exists at ansible/templates/frr.conf.j2
+#  - shared files exist at ansible/configs/daemons and ansible/configs/vtysh.conf
+#  - containerlab file exists at containerlab/nexsus.yml (on Kraken) and must be copied to Nexsus base_dir
+
+- name: Deploy full FRR forest + clients on Nexsus (one-click)
+  hosts: localhost
+  gather_facts: no
+  become: false
+
+  vars:
+    # Remote (Nexsus) paths
+    base_dir: "/home/nexsus/nexsus_config"
+    config_dir: "{{ base_dir }}/configs"
+    containerlab_remote_file: "{{ base_dir }}/nexsus.yml"
+
+    # Local (Kraken) paths (absolute is safest)
+    project_root: "/home/kraken/network-lab/lab-infrastructure-reseau/Phase-3-Architecture-réseau"
+    host_vars_dir: "{{ project_root }}/ansible/host_vars"
+    template_file: "{{ project_root }}/ansible/templates/frr.conf.j2"
+    shared_daemons: "{{ project_root }}/ansible/configs/daemons"
+    shared_vtysh: "{{ project_root }}/ansible/configs/vtysh.conf"
+    containerlab_local_file: "{{ project_root }}/containerlab/nexsus.yml"
+
+    # Containerlab naming
+    lab_name: "nexsus-lab"
+
+    # Routers list (must match host_vars filenames AND container names)
+    routers:
+      - core-router
+      - dist01
+      - dist02
+      - dist03
+      - dist04
+      - access01
+      - access02
+      - access03
+      - access04
+      - access05
+      - access06
+      - access07
+      - access08
+      - access09
+      - access10
+      - access11
+      - access12
+
+    # Clients: IMPORTANT
+    # - container name in docker after containerlab is: clab-<lab_name>-<node_name>
+    # - interface on client is eth5 (per your topology)
+    # - gateway must be the Access router LAN IP (eth6)
+    #
+    # Keep these aligned with your access01.yml/access10.yml eth6 IPs.
+    clients:
+      - node: "client-a"
+        iface: "eth5"
+        ip: "10.0.3.2/26"
+        gw: "10.0.3.1"
+      - node: "client-b"
+        iface: "eth5"
+        ip: "10.0.12.2/24"
+        gw: "10.0.12.1"
+
+  tasks:
+    - name: Ensure base directory exists on Nexsus
+      ansible.builtin.file:
+        path: "{{ base_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: nexsus_host
+      become: true
+
+    - name: Ensure config directory exists on Nexsus
+      ansible.builtin.file:
+        path: "{{ config_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: nexsus_host
+      become: true
+
+    # --- Generate router configs on Nexsus (NO copying .conf from Kraken) ---
+    - name: Load host_vars for each router (from Kraken filesystem)
+      ansible.builtin.include_vars:
+        file: "{{ host_vars_dir }}/{{ item }}.yml"
+        name: "rv"
+      loop: "{{ routers }}"
+      register: loaded_vars
+
+    - name: Render FRR config for each router directly onto Nexsus
+      ansible.builtin.template:
+        src: "{{ template_file }}"
+        dest: "{{ config_dir }}/{{ item.item }}.conf"
+        mode: "0644"
+      loop: "{{ loaded_vars.results }}"
+      delegate_to: nexsus_host
+      become: true
+      vars:
+        # Provide the variables the template expects
+        hostname: "{{ item.ansible_facts.rv.hostname }}"
+        loopback: "{{ item.ansible_facts.rv.loopback }}"
+        interfaces: "{{ item.ansible_facts.rv.interfaces }}"
+
+    # --- Copy shared FRR files to Nexsus (daemons + vtysh.conf) ---
+    - name: Copy FRR daemons file to Nexsus
+      ansible.builtin.copy:
+        src: "{{ shared_daemons }}"
+        dest: "{{ config_dir }}/daemons"
+        mode: "0644"
+      delegate_to: nexsus_host
+      become: true
+
+    - name: Copy vtysh.conf file to Nexsus
+      ansible.builtin.copy:
+        src: "{{ shared_vtysh }}"
+        dest: "{{ config_dir }}/vtysh.conf"
+        mode: "0644"
+      delegate_to: nexsus_host
+      become: true
+
+    # --- Copy containerlab topology to Nexsus ---
+    - name: Copy containerlab YAML to Nexsus
+      ansible.builtin.copy:
+        src: "{{ containerlab_local_file }}"
+        dest: "{{ containerlab_remote_file }}"
+        mode: "0644"
+      delegate_to: nexsus_host
+      become: true
+
+    # --- Deploy ONCE (no reload/incremental updates) ---
+    - name: Deploy containerlab lab on Nexsus
+      ansible.builtin.command: "sudo containerlab deploy -t {{ containerlab_remote_file }}"
+      delegate_to: nexsus_host
+      become: true
+
+    # --- Configure clients (static IP + default route) ---
+    # We "replace" to avoid errors if re-run. We also flush any old IP on that interface.
+    - name: Configure client interfaces and default route
+      ansible.builtin.shell: |
+        set -e
+        CNAME="clab-{{ lab_name }}-{{ item.node }}"
+        # Ensure interface exists and is up
+        docker exec "$CNAME" sh -c "ip link set {{ item.iface }} up"
+        # Clean any previous IPs (idempotent)
+        docker exec "$CNAME" sh -c "ip addr flush dev {{ item.iface }} || true"
+        # Set IP
+        docker exec "$CNAME" sh -c "ip addr add {{ item.ip }} dev {{ item.iface }}"
+        # Replace default route
+        docker exec "$CNAME" sh -c "ip route replace default via {{ item.gw }}"
+      loop: "{{ clients }}"
+      delegate_to: nexsus_host
+      become: true
+
+    - name: Fix default route on core router
+      command: docker exec clab-nexsus-lab-core-router ip route del default via 172.20.20.1 dev eth0
+      ignore_errors: true
+      delegate_to: nexsus_host
+
+    - name: Add correct default route on core router
+      command: docker exec clab-nexsus-lab-core-router ip route replace default via 10.0.1.6 dev eth4
+      delegate_to: nexsus_host
+
+
+    # --- Quick proof checks (non-fatal, just shows you status) ---
+    - name: Show client routes + test Internet ping (8.8.8.8)
+      ansible.builtin.shell: |
+        set +e
+        CNAME="clab-{{ lab_name }}-{{ item.node }}"
+        echo "===== $CNAME ====="
+        docker exec "$CNAME" sh -c "ip -br addr && echo && ip route && echo && ping -c 2 8.8.8.8"
+        exit 0
+      loop: "{{ clients }}"
+      delegate_to: nexsus_host
+      become: true
+      changed_when: false

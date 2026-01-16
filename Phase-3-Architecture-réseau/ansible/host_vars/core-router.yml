@@ -1,0 +1,55 @@
+# ansible/host_vars/core-router.yml
+hostname: core-router
+loopback: 10.0.255.1
+
+interfaces:
+  # =========================
+  # Core <-> Distribution (P2P /31) — OSPF Area 0
+  # (You asked to avoid 10.0.1.0/31 and 10.0.1.2/31 and 10.0.1.4/31 pairs)
+  # =========================
+
+  # core-router eth1 <-> dist02 eth5
+  - name: eth1
+    ip: 10.0.1.8/31
+    peer_ip: 10.0.1.9
+    area: 0
+    key: SuperSecret123Area0
+    ospf_type: point-to-point
+
+  # core-router eth2 <-> dist03 eth5
+  - name: eth2
+    ip: 10.0.1.10/31
+    peer_ip: 10.0.1.11
+    area: 0
+    key: SuperSecret123Area0
+    ospf_type: point-to-point
+
+  # core-router eth3 <-> dist04 eth5
+  - name: eth3
+    ip: 10.0.1.12/31
+    peer_ip: 10.0.1.13
+    area: 0
+    key: SuperSecret123Area0
+    ospf_type: point-to-point
+
+  # core-router eth5 <-> dist01 eth5
+  - name: eth5
+    ip: 10.0.1.14/31
+    peer_ip: 10.0.1.15
+    area: 0
+    key: SuperSecret123Area0
+    ospf_type: point-to-point
+
+  # =========================
+  # Outside uplink (VyOS/pfSense side) — NOT in OSPF
+  # Must keep core-router eth4 = 10.0.1.5/30 (your constraint)
+  # =========================
+  - name: eth4
+    ip: 10.0.1.5/30
+    ospf: false
+
+bfd_peers:
+  - { ip: 10.0.1.9,  iface: eth1 }
+  - { ip: 10.0.1.11, iface: eth2 }
+  - { ip: 10.0.1.13, iface: eth3 }
+  - { ip: 10.0.1.15, iface: eth5 }
