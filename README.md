@@ -49,4 +49,4 @@ Phase 1 — Architecture réseau
 Phase 2 — SOC et automatisation
 
 
-<img width="8086" height="3222" alt="_con nexsus clab drawio" src="https://github.com/user-attachments/assets/24c8ce80-6884-4de3-b3f2-9123dbbbe06a" />
+<img width="9879" height="5452" alt="_con nexsus clab drawio (1)" src="https://github.com/user-attachments/assets/5249bc4e-147b-4390-b568-baf0dc4b9d62" />
