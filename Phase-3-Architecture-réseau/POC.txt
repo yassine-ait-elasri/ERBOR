@@ -1,0 +1,126 @@
+============================================================
+NEXSUS LAB – OSPF END-TO-END CONNECTIVITY & FAILOVER PoC
+============================================================
+
+------------------------------------------------------------
+1) END-TO-END DATA PLANE VALIDATION (CLIENT ↔ CLIENT)
+------------------------------------------------------------
+
+# Client A → Client B (Access01 → Access10)
+docker exec -it clab-nexsus-lab-client-a ping -c 3 10.0.12.2
+
+# Client B → Client A (reverse path)
+docker exec -it clab-nexsus-lab-client-b ping -c 3 10.0.3.2
+
+# Path inspection (hop-by-hop)
+docker exec -it clab-nexsus-lab-client-a traceroute 10.0.12.2
+
+
+
+------------------------------------------------------------
+2) NORTHBOUND CONNECTIVITY (CLIENT → CORE / EDGE)
+------------------------------------------------------------
+
+# Reach core-side gateway
+docker exec -it clab-nexsus-lab-client-a ping -c 3 10.0.1.5
+
+# Reach VyOS uplink (next-hop)
+docker exec -it clab-nexsus-lab-client-a ping -c 3 10.0.1.6
+
+# Reach upstream internal IP
+docker exec -it clab-nexsus-lab-client-a ping -c 3 10.0.1.2
+
+# Internet reachability proof
+docker exec -it clab-nexsus-lab-client-a ping -c 3 8.8.8.8
+
+
+------------------------------------------------------------
+3) OSPF CONTROL PLANE – NEIGHBORS & TOPOLOGY
+------------------------------------------------------------
+
+# Core router: verify all OSPF adjacencies are FULL and stable (backbone visibility)
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip ospf neighbor"
+
+# Distribution router (dist01): verify OSPF areas, router role (ABR/ASBR), and timers
+docker exec -it clab-nexsus-lab-dist01 vtysh -c "show ip ospf"
+
+# Distribution router (dist02): verify per-interface OSPF parameters and area assignment
+docker exec -it clab-nexsus-lab-dist02 vtysh -c "show ip ospf interface"
+
+# Access router (access01): verify that summary LSAs are received from ABRs
+docker exec -it clab-nexsus-lab-access01 vtysh -c "show ip ospf database summary"
+
+# Access router (access02): verify OSPF-calculated routes (external / inter-area visibility)
+docker exec -it clab-nexsus-lab-access02 vtysh -c "show ip ospf route"
+
+
+
+------------------------------------------------------------
+4) FAST FAILURE DETECTION (BFD)
+------------------------------------------------------------
+
+# BFD peers on core router
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show bfd peers"
+
+
+------------------------------------------------------------
+5) OSPF DESIGN VERIFICATION
+------------------------------------------------------------
+
+# OSPF border routers (ABRs)
+docker exec -it clab-nexsus-lab-dist01 vtysh -c "show ip ospf border-routers"
+
+# OSPF area membership and role on access router
+docker exec -it clab-nexsus-lab-access01 vtysh -c "show ip ospf"
+
+# OSPF computed routing table (core)
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip ospf route"
+
+
+------------------------------------------------------------
+6) OSPF SECURITY – AUTHENTICATION CHECK
+------------------------------------------------------------
+
+# Verify OSPF MD5 authentication on core interface
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip ospf interface eth1" | grep -i auth
+
+
+------------------------------------------------------------
+7) FAILOVER / CONVERGENCE DEMONSTRATION
+------------------------------------------------------------
+
+# Baseline route toward Access01 LAN
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip route ospf" | grep 10.0.3.0/24
+
+# Show dist01 link state
+docker exec -it clab-nexsus-lab-dist01 ip a | grep eth5 -A 3
+
+# Simulate failure (dist01 → access01 link DOWN)
+docker exec -it clab-nexsus-lab-dist01 ip link set eth5 down
+
+# Verify link is down
+docker exec -it clab-nexsus-lab-dist01 ip a | grep eth5 -A 3
+
+# Observe OSPF route change on core
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip route ospf" | grep 10.0.3.0/24
+
+# Restore link
+docker exec -it clab-nexsus-lab-dist01 ip link set eth5 up
+
+# Verify link restoration
+docker exec -it clab-nexsus-lab-dist01 ip a | grep eth5 -A 3
+
+# Observe OSPF reconvergence
+docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip route ospf" | grep 10.0.3.0/24
+
+
+------------------------------------------------------------
+8) AUTOMATED CONVERGENCE TEST (OPTIONAL)
+------------------------------------------------------------
+
+# Run scripted convergence test
+../ospf_convergence_test.sh
+
+============================================================
+END OF PROOF OF CONCEPT
+============================================================
