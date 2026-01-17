@@ -119,7 +119,7 @@ docker exec -it clab-nexsus-lab-core-router vtysh -c "show ip route ospf" | grep
 ------------------------------------------------------------
 
 # Run scripted convergence test
-./ospf_convergence_test.sh
+../ospf_convergence_test.sh
 
 ============================================================
 END OF PROOF OF CONCEPT
