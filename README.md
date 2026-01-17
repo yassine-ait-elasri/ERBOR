@@ -1,4 +1,3 @@
-```md
 # **ERBOR — Laboratoire d’Infrastructure Réseau et Sécurité**
 
 **ERBOR** est un laboratoire complet de simulation d’une infrastructure réseau de type agence nationale / gouvernementale, conçu pour démontrer :
@@ -191,7 +190,5 @@ Chaque phase est **autonome**, **documentée** et **vérifiable**.
 - automatisation,
 - et résilience des infrastructures critiques.
 
-<img width="9879" height="5452" alt="_con nexsus clab drawio (1)" src="https://github.com/user-attachments/assets/5249bc4e-147b-4390-b568-baf0dc4b9d62" />
-```
 
 <img width="9879" height="5452" alt="_con nexsus clab drawio (1)" src="https://github.com/user-attachments/assets/5249bc4e-147b-4390-b568-baf0dc4b9d62" />
