@@ -134,8 +134,7 @@ Suricata → Redis → Worker Python → n8n → pfSense (API)
 - Observabilité east-west
 - Détection comportementale
 
-⚠️ Cette phase est volontairement **hors scope** du projet actuel  
-et fera l’objet d’une future étude et d’une implémentation.
+⚠️ Cette phase est actuellement objet d’une future étude et implémentation.
 
 ---
 
