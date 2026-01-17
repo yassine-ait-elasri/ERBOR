@@ -47,3 +47,6 @@ Simulation de grade production d'une infrastructure réseau d'agence nationale, 
 Phase 1 — Architecture réseau
 
 Phase 2 — SOC et automatisation
+
+
+<img width="8086" height="3222" alt="_con nexsus clab drawio" src="https://github.com/user-attachments/assets/24c8ce80-6884-4de3-b3f2-9123dbbbe06a" />
