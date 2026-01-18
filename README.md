@@ -51,7 +51,7 @@ Une architecture réellement résiliente ne peut reposer sur la confiance implic
 
 *(Schéma ci-dessous)*
 
-<img width="9879" height="5452" alt="ERBOR – Architecture réseau" src="https://github.com/user-attachments/assets/5249bc4e-147b-4390-b568-baf0dc4b9d62" />
+<img width="9879" height="5452" alt="_final con nexsus clab drawio" src="https://github.com/user-attachments/assets/978e0236-b8a8-45a1-aa05-3f114c93d96a" />
 
 ---
 
