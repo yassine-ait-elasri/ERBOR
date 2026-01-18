@@ -1,6 +1,7 @@
 # ansible/host_vars/core-router.yml
 hostname: core-router
 loopback: 10.0.255.1
+ospf_default_originate: true
 
 interfaces:
   # =========================
