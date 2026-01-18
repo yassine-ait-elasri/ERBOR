@@ -9,8 +9,10 @@ interface lo
 !
 {% for iface in interfaces %}
 interface {{ iface.name }}
+{% if iface.ip is defined %}
  ip address {{ iface.ip }}
-{% if iface.area is defined %}
+{% endif %}
+{% if iface.area is defined and (iface.ospf is not defined or iface.ospf) %}
  ip ospf area {{ iface.area }}
  ip ospf network {{ iface.ospf_type }}
  ip ospf authentication message-digest
@@ -23,11 +25,14 @@ interface {{ iface.name }}
 router ospf
  ospf router-id {{ loopback }}
  redistribute connected
+{% if ospf_default_originate is defined and ospf_default_originate %}
+ default-information originate
+{% endif %}
 !
 
 bfd
 {% for iface in interfaces %}
-{% if iface.peer_ip is defined %}
+{% if iface.peer_ip is defined and (iface.bfd is not defined or iface.bfd) %}
  peer {{ iface.peer_ip }} interface {{ iface.name }}
 {% endif %}
 {% endfor %}
