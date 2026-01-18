@@ -89,15 +89,15 @@ Le lab tourne :
 Pour connecter ce lab au réseau externe (VyOS/pfSense/Internet), on “perce” **deux couches de virtualisation** via un bridge Linux.
 
 ### ⚙️ Fonctionnement
-- L’interface VM **`enp0s3`** est reliée au réseau externe.
-- Un bridge Linux **`br-core`** est créé sur Nexsus.
-- `enp0s3` est **enslaved** dans `br-core` :
+
+- L’interface VM `enp0s3` est reliée au réseau externe (côté hyperviseur).
+- Un bridge Linux `br-core` est créé sur Nexsus.
+- `enp0s3` est enslaved dans `br-core` :
   - `enp0s3` devient un port **L2 pur**,
-  - `br-core` porte la connectivité logique.
-- L’interface **`eth4` du core-router** est connectée à `br-core`.
+  - `br-core` agit comme un **pont Ethernet**, sans logique IP.
+- L’interface `eth4` du `core-router` est connectée à `br-core`.
 
-➡️ Le **core-router** devient la **frontière entre le lab et le monde réel**.
-
+➡️ Le **core-router** devient l’unique **frontière L3** entre le lab et le monde réel.
 ---
 
 ## 4) Pourquoi `enp0s3` ne doit pas avoir d’IP
