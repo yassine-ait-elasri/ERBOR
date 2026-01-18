@@ -1,0 +1,14 @@
+Update PoC — Connectivité Internet rétablie (routes par défaut)
+
+La connectivité Internet depuis les routeurs Distribution / Access était cassée à cause de la route par défaut ajoutée automatiquement par Containerlab/Docker (default via 172.20.20.1 dev eth0).
+Le core-router arrivait à sortir vers Internet, mais les autres routeurs tentaient parfois d’utiliser ce mauvais next-hop (eth0 / réseau Docker), ce qui provoquait des timeouts (ping/traceroute).
+
+✅ Correction appliquée : après containerlab deploy, une tâche Ansible supprime cette route par défaut sur tous les routeurs (core + dist + access), afin que :
+
+le core-router reste la seule sortie vers l’extérieur (default route vers VyOS/pfSense),
+
+les autres routeurs utilisent la route par défaut injectée via OSPF (0.0.0.0/0),
+
+le trafic Internet des clients traverse bien : Access → Distribution → Core → VyOS/pfSense → Internet.
+
+Résultat : ping 8.8.8.8 et traceroute fonctionnent depuis les routeurs d’accès et les clients (selon la politique/filtrage en place).
