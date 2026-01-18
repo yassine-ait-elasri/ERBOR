@@ -110,7 +110,7 @@
         hostname: "{{ item.ansible_facts.rv.hostname }}"
         loopback: "{{ item.ansible_facts.rv.loopback }}"
         interfaces: "{{ item.ansible_facts.rv.interfaces }}"
-
+        ospf_default_originate: "{{ item.ansible_facts.rv.ospf_default_originate | default(false) }}"
     # --- Copy shared FRR files to Nexsus (daemons + vtysh.conf) ---
     - name: Copy FRR daemons file to Nexsus
       ansible.builtin.copy:
@@ -170,6 +170,15 @@
       command: docker exec clab-nexsus-lab-core-router ip route replace default via 10.0.1.6 dev eth4
       delegate_to: nexsus_host
 
+    - name: Remove containerlab default route (eth0 -> 172.20.20.1) on all routers
+      ansible.builtin.shell: |
+        set -e
+        for r in {{ routers | join(' ') }}; do
+          docker exec clab-{{ lab_name }}-$r sh -c "ip route del default via 172.20.20.1 dev eth0 2>/dev/null || true"
+        done
+      delegate_to: nexsus_host
+      become: true
+      changed_when: false
 
     # --- Quick proof checks (non-fatal, just shows you status) ---
     - name: Show client routes + test Internet ping (8.8.8.8)
